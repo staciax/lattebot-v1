@@ -7,12 +7,32 @@ from datetime import datetime
 
 client = commands.Bot(command_prefix=".",intents=discord.Intents.all())
 
-## commands
+## login , status , ping
 
 @client.event
 async def on_ready():
     await client.change_presence(status=discord.Status.idle, activity=discord.Game('✧ LATTE BOT.'))
     print(f"we have logged in as {client.user}")
+
+@client.command()
+async def ping(ctx):
+    embed=discord.Embed(description=(f'`{round(client.latency * 1000)} ms`'))
+    await ctx.send(embed=embed)
+
+## @client.command()
+##async def ping(ctx):
+##    await ctx.send(f'Ping : {round(client.latency * 1000)}ms')
+## random massge
+
+##@client.coomand
+
+
+
+
+
+
+
+## commands
 
 @client.command(name="userinfo")
 async def user_info(Ctx, *, user: discord.User = None):
@@ -31,10 +51,16 @@ async def user_info(Ctx, *, user: discord.User = None):
 		"Current activity" : f"{str(user.activity.type).title().split('.')[1]} {user.activity.name}" if user.activity is not None else "None",
 		"Created at"       : user.created_at.strftime("%d/%m/%Y %H:%M:%S"),
 		"Joined at"        : user.joined_at.strftime("%d/%m/%Y %H:%M:%S"),
+        
 	}
 	table = header + "\n".join([f"{key}{' '*(max([len(key) for key in rows.keys()])+2-len(key))}{value}" for key, value in rows.items()])
-	await Ctx.send(f"```{table}```{user.avatar_url}")
+	await Ctx.send(f"```{table}```") #await Ctx.send(f"```{table}```{user.avatar_url}")
 	return
+
+
+
+
+
 
 @client.command(name="serverinfo")
 async def guild_info(Ctx):
@@ -60,9 +86,11 @@ async def guild_info(Ctx):
 ##		"...of which human"     : len([Member for Member in Ctx.guild.members if not Member.bot]),
 ##		"...of which bots"      : len([Member for Member in Ctx.guild.members if Member.bot]),           
 ##		"Nº of invites"         : len(await Ctx.guild.invites()),
+# 
+#    
 	}
 	table = header + "\n".join([f"{key}{' '*(max([len(key) for key in rows.keys()])+2-len(key))}{value}" for key, value in rows.items()])
-	await Ctx.send(f"```{table}```{Ctx.guild.icon_url}")
+	await Ctx.send(f"```{table}```") ##	await Ctx.send(f"```{table}```{Ctx.guild.icon_url}
 	return
 
 
