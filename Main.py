@@ -4,8 +4,12 @@ from discord.ext import commands
 import datetime
 from datetime import datetime
 
+intents = discord.Intents()
+intents.all()
 
-client = commands.Bot(command_prefix=".",intents=discord.Intents.all())
+client = commands.Bot(command_prefix="l.",intents=discord.Intents.all())
+
+
 
 ## login , status , ping
 
@@ -51,15 +55,12 @@ async def user_info(Ctx, *, user: discord.User = None):
 		"Current activity" : f"{str(user.activity.type).title().split('.')[1]} {user.activity.name}" if user.activity is not None else "None",
 		"Created at"       : user.created_at.strftime("%d/%m/%Y %H:%M:%S"),
 		"Joined at"        : user.joined_at.strftime("%d/%m/%Y %H:%M:%S"),
+        "You are our"      : str(sorted(Ctx.guild.members, key=lambda m: m.joined_at).index(user)+1),
         
 	}
 	table = header + "\n".join([f"{key}{' '*(max([len(key) for key in rows.keys()])+2-len(key))}{value}" for key, value in rows.items()])
 	await Ctx.send(f"```{table}```") #await Ctx.send(f"```{table}```{user.avatar_url}")
 	return
-
-
-
-
 
 
 @client.command(name="serverinfo")
@@ -93,6 +94,21 @@ async def guild_info(Ctx):
 	await Ctx.send(f"```{table}```") ##	await Ctx.send(f"```{table}```{Ctx.guild.icon_url}
 	return
 
+@client.remove_command("help") ## turn of help 
+
+## help custom
+
+@client.command(name="help")
+async def help(Ctx):
+    embed=discord.Embed(
+    title=f"ยินดีต้อนรับเข้าสู่เซิฟเวอร์ ✧ LATTE.", 
+    description=f"Thanks for joining!",
+    timestamp=datetime.utcnow(),
+    color=0xc4cfcf
+) 
+    embed.set_thumbnail(url=Ctx.guild.icon_url)
+
+    await Ctx.channel.send(embed=embed)
 
 ## mod commands
 
@@ -125,24 +141,31 @@ async def kick(self, ctx, member: discord.Member, *, reason=None):
 
 @client.event
 async def on_member_join(member):
-    channel = client.get_channel(840379926792110120)
+    channel = client.get_channel(844462710526836756) #id test-bot
     embed=discord.Embed(
-    title=f"ยินดีต้อนรับเข้าสู่เซิฟเวอร์ ✧ LATTE.", 
-    description=f"Thanks for joining {member.guild.name}!",
+    description=f"⊹₊˚**‧Welcome‧**˚₊⊹ \nʚ˚̩̥̩ɞ ◟*to* **{member.guild}!** <a:ab__purplestar:854958903656710144> \n　。\nෆ ₊˚don’t forget to check out . . .", #⊹₊˚**‧Welcome‧**˚₊⊹ 
     timestamp=datetime.utcnow(),
     color=0xc4cfcf
     
-    ) 
-    embed.set_thumbnail(url=member.avatar_url) 
-    embed.set_footer(text=f"{member}", icon_url=member.avatar_url)
+    )
+    embed.set_author(name=f"{member}", icon_url=member.avatar_url), 
+    embed.set_thumbnail(url=member.avatar_url)
+    embed.set_footer(text=f"You're our {member.guild.member_count} members ෆ"),
 
-    await channel.send(embed=embed)  
+    await channel.send(content=f"||{member.mention}||", embed=embed) 
+
+#await bot.say(content="this `supports` __a__ **subset** *of* ~~markdown~~ 😃 ```js\nfunction foo(bar) {\n  console.log(bar);\n}\n\nfoo(1);```", embed=embed)
+
+#
+
+
 
 @client.event
 async def on_member_remove(member):
     channel = client.get_channel(858680947272581131)
     await channel.send(f"{member} has left the server")
 
+## custom reaction role
 
 @client.event
 async def on_raw_reaction_add(payload):
@@ -185,7 +208,7 @@ async def hello(ctx):
 @commands.has_permissions(administrator=True, manage_roles=True)
 async def reactrole(ctx, emoji, role: discord.Role, *, message):
 
-    emb = discord.Embed(description=message)
+    emb = discord.Embed(title="REACT GET ROLE", description=message)
     msg = await ctx.channel.send(embed=emb)
     await msg.add_reaction(emoji)
 
@@ -201,6 +224,15 @@ async def reactrole(ctx, emoji, role: discord.Role, *, message):
 
     with open('reactrole.json', 'w') as f:
         json.dump(data, f, indent=4)
+
+
+@client.command(pass_context=True)
+async def clear(ctx, amount: str):
+    if amount == 'all':
+        await ctx.channel.purge()
+    else:
+        await ctx.channel.purge(limit=(int(amount) + 1))
+
 
 ## token
 
