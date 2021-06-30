@@ -1,17 +1,25 @@
 import discord
 import json
-from discord.ext import commands
+from discord.ext import commands, tasks
+import random
 import datetime
+import asyncio
 from datetime import datetime
+from discord_slash import SlashCommand
 
 intents = discord.Intents()
 intents.all()
 
 client = commands.Bot(command_prefix="l.",intents=discord.Intents.all())
-
+slash = SlashCommand(client, sync_commands=True)
 
 
 ## login , status , ping
+
+@slash.slash(description="show the bots latency") #example slash command
+async def ping(ctx):
+    embed=discord.Embed(description=(f'`{round(client.latency * 1000)} ms`'))
+    await ctx.send(embed=embed)
 
 @client.event
 async def on_ready():
@@ -22,6 +30,12 @@ async def on_ready():
 async def ping(ctx):
     embed=discord.Embed(description=(f'`{round(client.latency * 1000)} ms`'))
     await ctx.send(embed=embed)
+
+@client.command()
+async def hello(ctx):
+    await ctx.channel.send(f"Hello! {ctx.author.mention}")
+
+#
 
 ## @client.command()
 ##async def ping(ctx):
@@ -137,6 +151,50 @@ async def kick(self, ctx, member: discord.Member, *, reason=None):
     await member.kick(reason=reason)
     await ctx.send(f'User {member} has been Kicked')
 
+
+@client.command(pass_context=True)
+async def clear(ctx, amount: str):
+    if amount == 'all':
+        await ctx.channel.purge()
+    else:
+        await ctx.channel.purge(limit=(int(amount) + 1))
+
+##
+
+@client.command()
+async def giveaway(ctx, title=None, winner=None, prize=None, time=None):
+    if title == None:
+        return await ctx.send('Please include a Title!')
+    elif winner == None:
+        return await ctx.send('Please include a winner!')
+    elif prize == None:
+        return await ctx.send('Please include a prize!')
+    elif time == None:
+        return await ctx.send('Please include a time!')
+    embed = discord.Embed(title=f'{title}' ,description=f'react with 🎉 to enter!\n{winner} winner \nHosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE)
+    time_convert = {"s":1, "m":60, "h":3600, "d": 86400}
+    gawtime =int(time[0]) * time_convert[time[-1]]
+    embed.set_footer(text=f'React with 🎉 to enter • Ends at • {time}')  
+    gaw_msg = await ctx.send(embed =embed)
+
+    await gaw_msg.add_reaction("🎉")
+    await asyncio.sleep(gawtime)
+
+    new_gaw_msg = await ctx.channel.fetch_message(gaw_msg.id)
+
+    users = await new_gaw_msg.reactions[0].users().flatten()
+    users.pop(users.index(client.user))
+
+    winners = random.choice(users)
+
+    newEmbed = discord.Embed(title=f'{title}',description=f'Winner: {winners.mention}\nHosted By:{ctx.author.mention}', color=0x000001 )
+    newEmbed.set_footer(text=f'The giveaway has ended 🎉') 
+
+    msg = await ctx.channel.fetch_message(gaw_msg.id)
+
+    await msg.edit(embed = newEmbed)
+
+
 ## events
 
 @client.event
@@ -197,13 +255,6 @@ async def on_raw_reaction_remove(payload):
                 
                 await client.get_guild(payload.guild_id).get_member(payload.user_id).remove_roles(role)
                     
-
-
-@client.command()
-async def hello(ctx):
-    await ctx.channel.send(f"Hello! {ctx.author.mention}")
-
-
 @client.command()
 @commands.has_permissions(administrator=True, manage_roles=True)
 async def reactrole(ctx, emoji, role: discord.Role, *, message):
@@ -224,15 +275,6 @@ async def reactrole(ctx, emoji, role: discord.Role, *, message):
 
     with open('reactrole.json', 'w') as f:
         json.dump(data, f, indent=4)
-
-
-@client.command(pass_context=True)
-async def clear(ctx, amount: str):
-    if amount == 'all':
-        await ctx.channel.purge()
-    else:
-        await ctx.channel.purge(limit=(int(amount) + 1))
-
 
 ## token
 
