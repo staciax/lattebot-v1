@@ -4,8 +4,8 @@ from discord.ext import commands, tasks
 import random
 import datetime
 import asyncio
-from datetime import datetime
-from discord_slash import SlashCommand
+from datetime import datetime, timedelta
+from discord_slash import SlashCommand, SlashContext
 
 intents = discord.Intents()
 intents.all()
@@ -13,6 +13,7 @@ intents.all()
 client = commands.Bot(command_prefix="l.",intents=discord.Intents.all())
 slash = SlashCommand(client, sync_commands=True)
 
+# seconds passed since epoch
 
 ## login , status , ping
 
@@ -20,6 +21,18 @@ slash = SlashCommand(client, sync_commands=True)
 async def ping(ctx):
     embed=discord.Embed(description=(f'`{round(client.latency * 1000)} ms`'))
     await ctx.send(embed=embed)
+
+"""
+
+@slash.slash(name="test")
+async def _test(ctx: SlashContext):
+    embed = discord.Embed(title="embed test")
+    await ctx.send(content="test", embeds=[embed])
+
+## example slash commands
+
+""" 
+"""------------ Example commands , event ------------ """
 
 @client.event
 async def on_ready():
@@ -35,22 +48,7 @@ async def ping(ctx):
 async def hello(ctx):
     await ctx.channel.send(f"Hello! {ctx.author.mention}")
 
-#
-
-## @client.command()
-##async def ping(ctx):
-##    await ctx.send(f'Ping : {round(client.latency * 1000)}ms')
-## random massge
-
-##@client.coomand
-
-
-
-
-
-
-
-## commands
+""" ------------ Info commands ------------ """
 
 @client.command(name="userinfo")
 async def user_info(Ctx, *, user: discord.User = None):
@@ -89,18 +87,16 @@ async def guild_info(Ctx):
 		"Shard ID"              : Ctx.guild.shard_id,
 		"Created on"            : Ctx.guild.created_at.strftime("%d/%m/%y %H:%M:%S"),
 		"joined"                : max([Member.joined_at for Member in Ctx.guild.members]).strftime("%d/%m/%y %H:%M:%S"),
-		"Members"               : Ctx.guild.member_count,
-		"Members with out bot"  : len([member for member in Ctx.guild.members if not member.bot]),
+		"Members with bots"     : Ctx.guild.member_count,
+		"Members"               : len([member for member in Ctx.guild.members if not member.bot]),
 		"Bots"                  : len([Member for Member in Ctx.guild.members if Member.bot]),   
 		"categories"            : len(Ctx.guild.categories),
 		"text channels"         : len(Ctx.guild.text_channels),
 		"voice channels"        : len(Ctx.guild.voice_channels),
 		"roles"                 : len(Ctx.guild.roles),
 		"Banned members"        : len(await Ctx.guild.bans()),
-	    "Most recent member"    : [Member for Member in Ctx.guild.members if Member.joined_at is max([Member.joined_at for Member in Ctx.guild.members])][0].display_name,
-##		"...of which human"     : len([Member for Member in Ctx.guild.members if not Member.bot]),
-##		"...of which bots"      : len([Member for Member in Ctx.guild.members if Member.bot]),           
-##		"Nº of invites"         : len(await Ctx.guild.invites()),
+	    "Most recent member"    : [Member for Member in Ctx.guild.members if Member.joined_at is max([Member.joined_at for Member in Ctx.guild.members])][0].display_name,          
+		"invite link"           : len(await Ctx.guild.invites()),
 # 
 #    
 	}
@@ -108,10 +104,42 @@ async def guild_info(Ctx):
 	await Ctx.send(f"```{table}```") ##	await Ctx.send(f"```{table}```{Ctx.guild.icon_url}
 	return
 
-@client.remove_command("help") ## turn of help 
+## server info slash
 
-## help custom
+@slash.slash(description="show server info") 
+async def guild_info(Ctx):
+	"""Displays server information."""
+	header = f"Server information - {Ctx.guild.name}\n\n"
+	rows = {
+		"Name"                  : Ctx.guild.name,
+		"ID"                    : Ctx.guild.id,
+		"Region"                : str(Ctx.guild.region).title(),
+		"Owner"                 : Ctx.guild.owner.display_name,
+		"Shard ID"              : Ctx.guild.shard_id,
+		"Created on"            : Ctx.guild.created_at.strftime("%d/%m/%y %H:%M:%S"),
+		"joined"                : max([Member.joined_at for Member in Ctx.guild.members]).strftime("%d/%m/%y %H:%M:%S"),
+		"Members with bots"     : Ctx.guild.member_count,
+		"Members"               : len([member for member in Ctx.guild.members if not member.bot]),
+		"Bots"                  : len([Member for Member in Ctx.guild.members if Member.bot]),   
+		"categories"            : len(Ctx.guild.categories),
+		"text channels"         : len(Ctx.guild.text_channels),
+		"voice channels"        : len(Ctx.guild.voice_channels),
+		"roles"                 : len(Ctx.guild.roles),
+		"Banned members"        : len(await Ctx.guild.bans()),
+	    "Most recent member"    : [Member for Member in Ctx.guild.members if Member.joined_at is max([Member.joined_at for Member in Ctx.guild.members])][0].display_name,         
+		"invite link"           : len(await Ctx.guild.invites()),
+# 
+#    
+	}
+	table = header + "\n".join([f"{key}{' '*(max([len(key) for key in rows.keys()])+2-len(key))}{value}" for key, value in rows.items()])
+	await Ctx.send(f"```{table}```") ##	await Ctx.send(f"```{table}```{Ctx.guild.icon_url}
+	return
 
+
+
+""" ------------ Commands ------------ """
+
+@client.remove_command("help") ## remove defaul hlep
 @client.command(name="help")
 async def help(Ctx):
     embed=discord.Embed(
@@ -124,7 +152,19 @@ async def help(Ctx):
 
     await Ctx.channel.send(embed=embed)
 
-## mod commands
+@client.command(name='avatar', help='fetch avatar of a user')
+async def avatar(ctx, *, member: discord.Member = None):
+    if not member:
+        member = ctx.message.author
+    userAvatar = member.avatar_url
+
+    embed = discord.Embed(title = f"{member.name}'s avatar", color = 0xc4cfcf)
+    embed.set_image(url = userAvatar) # Shows the avatar
+    embed.set_footer(text = f'Requested by {ctx.author}', icon_url = ctx.author.avatar_url)
+    await ctx.send(embed = embed)
+
+
+""" ------------ Moderator commands ------------ """
 
 @client.command()
 @commands.has_permissions(ban_members = True)
@@ -151,7 +191,6 @@ async def kick(self, ctx, member: discord.Member, *, reason=None):
     await member.kick(reason=reason)
     await ctx.send(f'User {member} has been Kicked')
 
-
 @client.command(pass_context=True)
 async def clear(ctx, amount: str):
     if amount == 'all':
@@ -159,9 +198,98 @@ async def clear(ctx, amount: str):
     else:
         await ctx.channel.purge(limit=(int(amount) + 1))
 
-##
+""" ------------ Giveaways ------------ """
+
+
+
+def convert(time):
+    pos = ["s","m","h","d"]
+
+    time_detect = {"s" : 1, "m" : 60, "h" : 3600, "d": 3600*24}
+
+    unit = time[-1]
+
+    if unit not in pos:
+        return -1
+    try:
+        val = int(time[:-1])
+    except:
+        return -2
+
+    return val * time_detect[unit]
+
 
 @client.command()
+#@commands.has_permissions(administrator=True)
+async def giveaways(ctx):
+    await ctx.send("let")
+
+    questions = {"test1",
+                 "test2",
+                 "test3"}
+
+    answers = []
+
+    def check(m):
+        return m.author == ctx.author and m.channel == ctx.channel
+
+    for i in questions:
+        await ctx.send(i)
+
+        try:
+            msg = await client.wait_for('message', timeout=15.0, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send('test4\'ddad')
+            return
+        else:
+            answers.append(msg.content)
+
+    
+    try:
+        c_id = int(answers[0][2:-1])
+    except: 
+        await ctx.send('test4')
+        return
+
+
+    channel = client.get_channel(c_id)
+
+    time = convert(answers[1])
+    if time == -1:
+        await ctx.send(f"test5")
+        return
+    elif time == -2:
+        await ctx.send(f"test6")
+
+    prize = answers[2]
+
+    embed = discord.Embed(title=f'test' ,description=f'react with 🎉 to enter!\n<a:giveawayhost:859660981101395968>winner\n<:S_CuteGWave:859660564996816907>Hosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE,)
+    embed.set_footer(text=f'Ends at •{answers[1]}')
+
+    my_msg = await channel.send(embed = embed)
+
+    await my_msg.add_reaction("🎉")
+
+    await asyncio.sleep(time)
+
+    new_msg = await ctx.channel.fetch_message(my_msg.id)
+
+    users = await new_msg.reactions[0].users().flatten()
+    users.pop(users.index(client.user))
+
+    winner = random.choice(users)
+
+    newEmbed = discord.Embed(title=f'{winner}',description=f'Winner: {winner.mention}\nHosted By:{ctx.author.mention}', color=0x000001 )
+    newEmbed.set_footer(text=f'The giveaway has ended 🎉') 
+
+    msg = await ctx.channel.fetch_message(my_msg.id)
+
+    await msg.edit(embed = newEmbed)
+    await ctx.send(f'your won giveaway {winner}')
+
+
+@client.command()
+@commands.has_permissions(administrator=True)
 async def giveaway(ctx, title=None, winner=None, prize=None, time=None):
     if title == None:
         return await ctx.send('Please include a Title!')
@@ -171,11 +299,11 @@ async def giveaway(ctx, title=None, winner=None, prize=None, time=None):
         return await ctx.send('Please include a prize!')
     elif time == None:
         return await ctx.send('Please include a time!')
-    embed = discord.Embed(title=f'{title}' ,description=f'react with 🎉 to enter!\n{winner} winner \nHosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE)
-    time_convert = {"s":1, "m":60, "h":3600, "d": 86400}
+    embed = discord.Embed(title=f'{title}' ,description=f'react with 🎉 to enter!\nwinner**{winner}**\nHosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE,)
+    time_convert = {"s":1, "m":60, "h":3600, "d":86400}
     gawtime =int(time[0]) * time_convert[time[-1]]
-    embed.set_footer(text=f'React with 🎉 to enter • Ends at • {time}')  
-    gaw_msg = await ctx.send(embed =embed)
+    embed.set_footer(text=f'React with 🎉 to enter • Ends at • {time}')
+    gaw_msg = await ctx.send(embed = embed)
 
     await gaw_msg.add_reaction("🎉")
     await asyncio.sleep(gawtime)
@@ -193,11 +321,13 @@ async def giveaway(ctx, title=None, winner=None, prize=None, time=None):
     msg = await ctx.channel.fetch_message(gaw_msg.id)
 
     await msg.edit(embed = newEmbed)
+    await ctx.send("wtf is that")
 
 
-## events
+""" ------------ Events ------------ """
 
-@client.event
+
+@client.event #member join alert
 async def on_member_join(member):
     channel = client.get_channel(844462710526836756) #id test-bot
     embed=discord.Embed(
@@ -212,18 +342,12 @@ async def on_member_join(member):
 
     await channel.send(content=f"||{member.mention}||", embed=embed) 
 
-#await bot.say(content="this `supports` __a__ **subset** *of* ~~markdown~~ 😃 ```js\nfunction foo(bar) {\n  console.log(bar);\n}\n\nfoo(1);```", embed=embed)
-
-#
-
-
-
-@client.event
+@client.event #leave join alert
 async def on_member_remove(member):
     channel = client.get_channel(858680947272581131)
     await channel.send(f"{member} has left the server")
 
-## custom reaction role
+""" ------------ custom reaction role ------------ """
 
 @client.event
 async def on_raw_reaction_add(payload):
@@ -276,6 +400,6 @@ async def reactrole(ctx, emoji, role: discord.Role, *, message):
     with open('reactrole.json', 'w') as f:
         json.dump(data, f, indent=4)
 
-## token
+""" ------------ TOKEN ------------ """
 
 client.run('ODU0MTM0NDAyOTU0ODIxNjQz.YMfgpg.nAFyoLIAJ3K0jLFLEp0AAkJ6s9k')
