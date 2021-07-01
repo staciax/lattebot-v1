@@ -5,13 +5,14 @@ import random
 import datetime
 import asyncio
 import re
+from config import *
 from datetime import datetime, timedelta
 from discord_slash import SlashCommand, SlashContext
 
 intents = discord.Intents()
 intents.all()
 
-client = commands.Bot(command_prefix="l.", case_insensitive=True,intents=discord.Intents.all())
+client = commands.Bot(command_prefix=PREFIX, case_insensitive=True,intents=discord.Intents.all())
 slash = SlashCommand(client, sync_commands=True)
 
 # seconds passed since epoch
@@ -292,8 +293,8 @@ async def giveaway(ctx):
 
     futuredate = datetime.utcnow() + timedelta(seconds=timewait)
     embed1 = discord.Embed(color=discord.Color(random.randint(0x000000, 0xFFFFFF)),
-                           title=f"🎉GIVEAWAY🎉\n`{msg4.content}`", timestamp=futuredate,
-                           description=f'React with 🎉 to enter!\nHosted by: {ctx.author.mention}')
+                           title=f"🎉GIVEAWAY🎉", timestamp=futuredate,
+                           description=f'React with 🎉 to enter!\nHosted by: {ctrx.autho.mention}\n{msg4.content}\n')
 
     embed1.set_footer(text=f"Giveaway will end")
     msg = await giveawaychannel.send(embed=embed1)
@@ -311,9 +312,10 @@ async def giveaway(ctx):
         return await giveawaychannel.send("not enough participants")
     winnerstosend = "\n".join([winner.mention for winner in winners])
 
-    win = await msg.edit(embed=discord.Embed(title="WINNER",
-                                             description=f"Congratulations {winnerstosend}, you have won **{msg4.content}**!",
-                                             color=discord.Color.blue()))
+    newEmbed = discord.Embed(title=f'🎉GIVEAWAY🎉',description=f'Winner: {winnerstosend}\nHosted By:{ctx.author.mention}', color=0x000001 )
+    newEmbed.set_footer(text=f'🎉 The giveaway has ended 🎉')
+
+    win = await msg.edit(embed=newEmbed)
 
                                              
 # Reroll command, used for chosing a new random winner in the giveaway
@@ -332,19 +334,17 @@ async def reroll(ctx):
         await ctx.send("No giveaways going on in this channel.")
 
 """ --------- """
-"""
+
+### Quick giveaways
+
 @client.command()
 @commands.has_permissions(administrator=True)
-async def giveaway(ctx, title=None, winner=None, prize=None, time=None):
-    if title == None:
-        return await ctx.send('Please include a Title!')
-    elif winner == None:
-        return await ctx.send('Please include a winner!')
-    elif prize == None:
+async def giveaways(ctx, prize=None, time=None):
+    if prize == None:
         return await ctx.send('Please include a prize!')
     elif time == None:
         return await ctx.send('Please include a time!')
-    embed = discord.Embed(title=f'{title}' ,description=f'react with 🎉 to enter!\nwinner**{winner}**\nHosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE,)
+    embed = discord.Embed(title=f'🎉 GIVEAWAY 🎉' ,description=f'react with 🎉 to enter!\nwinner: **1**\nHosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE,)
     time_convert = {"s":1, "m":60, "h":3600, "d":86400}
     gawtime =int(time[0]) * time_convert[time[-1]]
     embed.set_footer(text=f'React with 🎉 to enter • Ends at • {time}')
@@ -360,15 +360,13 @@ async def giveaway(ctx, title=None, winner=None, prize=None, time=None):
 
     winners = random.choice(users)
 
-    newEmbed = discord.Embed(title=f'{title}',description=f'Winner: {winners.mention}\nHosted By:{ctx.author.mention}', color=0x000001 )
+    newEmbed = discord.Embed(title=f'🎉 GIVEAWAY 🎉',description=f'Winner: {winners.mention}\nHosted By:{ctx.author.mention}', color=0x000001 )
     newEmbed.set_footer(text=f'The giveaway has ended 🎉') 
 
     msg = await ctx.channel.fetch_message(gaw_msg.id)
 
     await msg.edit(embed = newEmbed)
-    await ctx.send("wtf is that")
-
-"""
+    await ctx.send(f"You won giveaways **{winners.mention}** Please contact Host **{ctx.author.mention}**")
 
 
 """ ------------ Events ------------ """
@@ -449,4 +447,4 @@ async def reactrole(ctx, emoji, role: discord.Role, *, message):
 
 """ ------------ TOKEN ------------ """
 
-client.run('ODU0MTM0NDAyOTU0ODIxNjQz.YMfgpg.nAFyoLIAJ3K0jLFLEp0AAkJ6s9k')
+client.run(TOKEN, bot=True, reconnect=True)
