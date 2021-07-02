@@ -15,8 +15,6 @@ intents.all()
 client = commands.Bot(command_prefix=PREFIX, case_insensitive=True,intents=discord.Intents.all())
 slash = SlashCommand(client, sync_commands=True)
 
-# seconds passed since epoch
-
 ## login , status , ping
 
 @slash.slash(description="show the bots latency") #example slash command
@@ -38,7 +36,7 @@ async def _test(ctx: SlashContext):
 
 @client.event
 async def on_ready():
-    await client.change_presence(status=discord.Status.idle, activity=discord.Game('✧ LATTE BOT.'))
+    await client.change_presence(status=discord.Status.idle, activity=discord.Game(f'l.help')) #(f'LATTE Online : {len(client.guilds)-1} Server')) 
     print(f"we have logged in as {client.user}")
 
 @client.command()
@@ -106,39 +104,6 @@ async def guild_info(Ctx):
 	await Ctx.send(f"```{table}```") ##	await Ctx.send(f"```{table}```{Ctx.guild.icon_url}
 	return
 
-## server info slash
-
-@slash.slash(description="show server info") 
-async def guild_info(Ctx):
-	"""Displays server information."""
-	header = f"Server information - {Ctx.guild.name}\n\n"
-	rows = {
-		"Name"                  : Ctx.guild.name,
-		"ID"                    : Ctx.guild.id,
-		"Region"                : str(Ctx.guild.region).title(),
-		"Owner"                 : Ctx.guild.owner.display_name,
-		"Shard ID"              : Ctx.guild.shard_id,
-		"Created on"            : Ctx.guild.created_at.strftime("%d/%m/%y %H:%M:%S"),
-		"joined"                : max([Member.joined_at for Member in Ctx.guild.members]).strftime("%d/%m/%y %H:%M:%S"),
-		"Members with bots"     : Ctx.guild.member_count,
-		"Members"               : len([member for member in Ctx.guild.members if not member.bot]),
-		"Bots"                  : len([Member for Member in Ctx.guild.members if Member.bot]),   
-		"categories"            : len(Ctx.guild.categories),
-		"text channels"         : len(Ctx.guild.text_channels),
-		"voice channels"        : len(Ctx.guild.voice_channels),
-		"roles"                 : len(Ctx.guild.roles),
-		"Banned members"        : len(await Ctx.guild.bans()),
-	    "Most recent member"    : [Member for Member in Ctx.guild.members if Member.joined_at is max([Member.joined_at for Member in Ctx.guild.members])][0].display_name,         
-		"invite link"           : len(await Ctx.guild.invites()),
-# 
-#    
-	}
-	table = header + "\n".join([f"{key}{' '*(max([len(key) for key in rows.keys()])+2-len(key))}{value}" for key, value in rows.items()])
-	await Ctx.send(f"```{table}```") ##	await Ctx.send(f"```{table}```{Ctx.guild.icon_url}
-	return
-
-
-
 """ ------------ Commands ------------ """
 
 @client.remove_command("help") ## remove defaul hlep
@@ -154,7 +119,7 @@ async def help(Ctx):
 
     await Ctx.channel.send(embed=embed)
 
-@client.command(name='avatar', help='fetch avatar of a user')
+@client.command(name='avatar')
 async def avatar(ctx, *, member: discord.Member = None):
     if not member:
         member = ctx.message.author
@@ -168,13 +133,18 @@ async def avatar(ctx, *, member: discord.Member = None):
 
 """ ------------ Moderator commands ------------ """
 
-@client.command()
+@client.command(description="ban member")
 @commands.has_permissions(ban_members = True)
 async def ban(ctx, member : discord.Member, *, reason = None):
-    await member.ban(reason = reason)
-    await ctx.send(f'User {member} has been Banned')
+    try:
+        await member.ban(reason=reason)
+        await ctx.message.delete()
+        await ctx.channel.send(f'{member.name} has been banned from server'
+                               f'Reason: {reason}')
+    except Exception:
+        await ctx.channel.send(f"Bot doesn't have enough permission to ban someone. Upgrade the Permissions")
 
-@client.command()
+@client.command(description="unban member")
 @commands.has_permissions(kick_members=True)
 async def unban(ctx, *,member):
     banner_users = await ctx.guild.bans()
@@ -187,18 +157,68 @@ async def unban(ctx, *,member):
             await ctx.guild.unban(user)
             await ctx.send(f'Unbanned {user.name}#{user.discriminator}')
 
-@client.command()
+@client.command(description="kick member")
 @commands.has_permissions(kick_members=True)
 async def kick(self, ctx, member: discord.Member, *, reason=None):
     await member.kick(reason=reason)
     await ctx.send(f'User {member} has been Kicked')
 
-@client.command(pass_context=True)
+@client.command(pass_context=True,description="clear message")
 async def clear(ctx, amount: str):
     if amount == 'all':
         await ctx.channel.purge()
     else:
         await ctx.channel.purge(limit=(int(amount) + 1))
+
+@client.command()
+async def join(ctx):
+    channel = ctx.author.voice.channel
+    await channel.connect()
+
+@client.command()
+async def leave(ctx):
+    await ctx.voice_client.disconnect()
+
+@client.command()
+async def mute(ctx, member: discord.Member, *, reason=None):
+#
+    mutedRole = discord.utils.get(ctx.guild.roles, name="୭ muted ୭") 
+
+    if not mutedRole:
+        muteRole = await guild.create_role(name="୭ muted ୭")
+
+        for channel in guild.channels:
+            await chennel.set_permission(mureRole, speak=False, send_messages=False, read_message=False) # when don't have role muted
+
+    embed = discord.Embed(title='Muted')
+    await ctx.send (embed=embed)
+    await member.add_roles(mutedRole, reason=reason)
+    await member.send(f'you have beed muted for {ctx.guild.name} Reason: {reason} ')
+
+@client.command()
+async def unmute(ctx, member: discord.Member):
+    mutedRole = discord.utils.get(ctx.guild.roles, name="୭ muted ୭")
+
+    await member.remove_roles(mutedRole)
+
+@client.command()
+async def tick(ctx, member: discord.Member, reason=None):
+    await ctx.send("Please specify a Member! | `tick member reason`")
+    
+    if reason == None:
+        return await ctx.send('Please specify a Reason! | `tick member reason`')
+
+    embed = discord.Embed(title="เอาไป 1 ติ๊ก",color=0xFFFFFF,timestamp=datetime.utcnow())
+    embed.set_footer(text=f'สาเหตุ : {reason}')
+    await member.send(embed=embed)
+
+@client.command(aliases='sv')
+async def servers(ctx):
+    embed = discord.Embed(title=f"**SERVER COUNT**",description=f"♡ ꒷ Bot is online **{len(client.guilds)-1}** servers︰𓂃 ꒱\n\n⸝⸝﹒[`invite bot link`](https://discord.com/api/oauth2/authorize?client_id=854134402954821643&permissions=8&scope=bot%20applications.commands) ꒱",color=0xFFFFFF,timestamp=datetime.utcnow())
+    embed.set_footer(text=f'Req by {ctx.author}', icon_url = ctx.author.avatar_url)
+    embed.set_thumbnail(url=ctx.guild.icon_url)
+    embed.set_image(url=ctx.guild.banner_url)
+    await ctx.send(embed=embed)
 
 """ ------------ Giveaways ------------ """
 
@@ -288,15 +308,15 @@ async def giveaway(ctx):
 #                             color=discord.Color.red())
 #    logembed.set_thumbnail(url=ctx.author.avatar_url)
 
-#    logchannel = ctx.guild.get_channel(859789105507598346)  # Put your channel, you would like to send giveaway logs to.
+#    logchannel = ctx.guild.get_channel(channel id)  #
 #    await logchannel.send(embed=logembed)
 
     futuredate = datetime.utcnow() + timedelta(seconds=timewait)
-    embed1 = discord.Embed(color=discord.Color(random.randint(0x000000, 0xFFFFFF)),
-                           title=f"🎉GIVEAWAY🎉", timestamp=futuredate,
-                           description=f'React with 🎉 to enter!\nHosted by: {ctrx.autho.mention}\n{msg4.content}\n')
+    embed1 = discord.Embed(color=discord.Color(0x6f2da8), # random color (color=discord.Color(random.randint(0x000000, 0xFFFFFF)),
+                           title=f"LATTE GIVEAWAY", timestamp=futuredate,
+                           description=f'React with 🎉 to enter!\nWinner(s) : **{winerscount}**\nHosted by: {ctx.author.mention}\n\n`{msg4.content}`\n')
 
-    embed1.set_footer(text=f"Giveaway will end")
+    embed1.set_footer(text=f"Ends at")
     msg = await giveawaychannel.send(embed=embed1)
     await msg.add_reaction("🎉")
     await asyncio.sleep(timewait)
@@ -312,13 +332,14 @@ async def giveaway(ctx):
         return await giveawaychannel.send("not enough participants")
     winnerstosend = "\n".join([winner.mention for winner in winners])
 
-    newEmbed = discord.Embed(title=f'🎉GIVEAWAY🎉',description=f'Winner: {winnerstosend}\nHosted By:{ctx.author.mention}', color=0x000001 )
-    newEmbed.set_footer(text=f'🎉 The giveaway has ended 🎉')
+    newEmbed = discord.Embed(title=f'🎉GIVEAWAY ENDED🎉',description=f'Winner(s) : **{winnerstosend}**\nHosted By :{ctx.author.mention}\n\n`{msg4.content}`\n', color=0x2f3136,timestamp=futuredate)
+    newEmbed.set_footer(text=f'Ends at')
 
     win = await msg.edit(embed=newEmbed)
+    await ctx.send(f"You won giveaway **{winnerstosend}** Please contact Host **{ctx.author.mention}**")
 
                                              
-# Reroll command, used for chosing a new random winner in the giveaway
+# Reroll command
 @client.command()
 @commands.has_permissions(manage_guild=True)
 async def reroll(ctx):
@@ -328,10 +349,16 @@ async def reroll(ctx):
             users = await reroll.reactions[0].users().flatten()
             users.pop(users.index(client.user))
             winner = random.choice(users)
-            await ctx.send(f"The new winner is {winner.mention}")
+
+            reEmbed = discord.Embed(title=f'🎉GIVEAWAY ENDED🎉',description=f'Winner(s) : {winner.mention}\nHosted By : {ctx.author.mention}\n', color=0x000001,timestamp=datetime.utcnow())
+            reEmbed.set_footer(text=f'Ends at')
+            
+            await reroll.edit(embed=reEmbed)
+            await ctx.send(f"You won giveaway **{winner.mention}** Please contact Host **{ctx.author.mention}**") #ctx.send(f"The new winner is {winner.mention}")
             break
     else:
         await ctx.send("No giveaways going on in this channel.")
+        
 
 """ --------- """
 
@@ -343,8 +370,8 @@ async def giveaways(ctx, prize=None, time=None):
     if prize == None:
         return await ctx.send('Please include a prize!')
     elif time == None:
-        return await ctx.send('Please include a time!')
-    embed = discord.Embed(title=f'🎉 GIVEAWAY 🎉' ,description=f'react with 🎉 to enter!\nwinner: **1**\nHosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE,)
+        return await ctx.send('Please include a time!')   
+    embed = discord.Embed(title=f'🎉 LATTE GIVEAWAY 🎉' ,description=f'react with 🎉 to enter!\nwinner: **1**\nHosted by: {ctx.author.mention}\n\n**{prize}**',color=0x9013FE,)
     time_convert = {"s":1, "m":60, "h":3600, "d":86400}
     gawtime =int(time[0]) * time_convert[time[-1]]
     embed.set_footer(text=f'React with 🎉 to enter • Ends at • {time}')
@@ -360,7 +387,7 @@ async def giveaways(ctx, prize=None, time=None):
 
     winners = random.choice(users)
 
-    newEmbed = discord.Embed(title=f'🎉 GIVEAWAY 🎉',description=f'Winner: {winners.mention}\nHosted By:{ctx.author.mention}', color=0x000001 )
+    newEmbed = discord.Embed(title=f'🎉 GIVEAWAY ENDED 🎉',description=f'Winner: {winners.mention}\nHosted By:{ctx.author.mention}', color=0x2f3136)
     newEmbed.set_footer(text=f'The giveaway has ended 🎉') 
 
     msg = await ctx.channel.fetch_message(gaw_msg.id)
@@ -374,9 +401,10 @@ async def giveaways(ctx, prize=None, time=None):
 
 @client.event #member join alert
 async def on_member_join(member):
-    channel = client.get_channel(844462710526836756) #id test-bot
-    embed=discord.Embed(
-    description=f"⊹₊˚**‧Welcome‧**˚₊⊹ \nʚ˚̩̥̩ɞ ◟*to* **{member.guild}!** <a:ab__purplestar:854958903656710144> \n　。\nෆ ₊˚don’t forget to check out . . .", #⊹₊˚**‧Welcome‧**˚₊⊹ 
+    channel = discord.utils.get(member.guild.text_channels, name="♢・welcome")
+    if channel:
+        embed=discord.Embed(
+    description=f"ʚ˚̩̥̩ɞ ◟‧Welcome‧ *to* **{member.guild}!** <a:ab__purplestar:854958903656710144>\n　。\nෆ ₊˚don’t forget to check out . . .\n\n‧˚₊ ପ <:a_pink_dot:860493678723072000>︰<#840380566862823425> ଓ ♡ ˖˚˳\n♡ ꒷ get cute roles~︰𓂃 ꒱\n\n⸝⸝﹒{member.mention} ꒱ <a:S_wtfemoji:860490611048054845>", #⊹₊˚**‧Welcome‧**˚₊⊹ 
     timestamp=datetime.utcnow(),
     color=0xc4cfcf
     
@@ -385,12 +413,28 @@ async def on_member_join(member):
     embed.set_thumbnail(url=member.avatar_url)
     embed.set_footer(text=f"You're our {member.guild.member_count} members ෆ"),
 
-    await channel.send(content=f"||{member.mention}||", embed=embed) 
+    await channel.send(embed=embed) #(content=f"||{member.mention}||", embed=embed) 
+
+##@client.event  // auto role
+##async def on_member_join(member):
+##  role = get(member.guild.roles, id=role_id)
+##  await member.add_roles(role)
+
 
 @client.event #leave join alert
 async def on_member_remove(member):
-    channel = client.get_channel(858680947272581131)
-    await channel.send(f"{member} has left the server")
+    channel = discord.utils.get(member.guild.text_channels, name="╰╮leave﹕₊")
+    if channel:
+        embed = discord.Embed(
+            description=f"**See ya good bye\n`{member}`**",
+            color=0xdbd7d2)
+        embed.set_footer(text="—・𝗁𝗈𝗉𝖾 𝗒𝗈𝗎 𝖾𝗇𝗃𝗈𝗒𝖾𝖽 𝗒𝗈𝗎𝗋 𝗌𝗍𝖺𝗒")
+        embed.timestamp = datetime.utcnow()
+
+    await channel.send(embed = embed) 
+
+
+#    await channel.send(f"{member} has left the server")
 
 """ ------------ custom reaction role ------------ """
 
